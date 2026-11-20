@@ -17,7 +17,7 @@ class FakeClassifier:
 
 
 def _jpeg_bytes():
-    image = Image.new("RGB", (128, 128), color=(120, 90, 80))
+    pixels = np.random.default_rng(11).integers(0, 256, (128, 128, 3), dtype=np.uint8)\n    image = Image.fromarray(pixels, mode="RGB")
     buffer = BytesIO()
     image.save(buffer, format="JPEG")
     return buffer.getvalue()
