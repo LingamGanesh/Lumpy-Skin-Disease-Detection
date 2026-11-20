@@ -12,6 +12,7 @@ from PIL import Image, UnidentifiedImageError
 from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
 from lumpycare.database import init_db, save_scan
+from lumpycare.dashboard import render_dashboard
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -70,41 +71,7 @@ metrics = bundle.metrics
 init_db()
 
 if page == "Dashboard":
-    st.subheader("Screening workspace")
-    cols = st.columns(4)
-    cards = [
-        ("Held-out test accuracy", f"{metrics['accuracy'] * 100:.1f}%"),
-        ("Dataset images", f"{metrics['total_count']:,}"),
-        ("Training images", f"{metrics['train_count']:,}"),
-        ("Test images", f"{metrics['test_count']:,}"),
-    ]
-    for col, (label, value) in zip(cols, cards):
-        with col:
-            metric_card(label, value)
-    st.write("")
-    left, right = st.columns([1.15, 1])
-    with left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown("### Start a screening")
-        st.markdown(
-            "1. Choose **Screen an image** in the sidebar.\n"
-            "2. Upload a JPG/PNG/WEBP photo or capture one with your device camera.\n"
-            "3. Review the predicted class and model probability estimate.\n"
-            "4. Export the result or review this session's history."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-    with right:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown("### Model and data")
-        st.write(f"**Classifier:** RBF-kernel Support Vector Machine")
-        st.write(f"**Training data source:** {bundle.source}")
-        st.write(f"**Image transform:** 128 × 128 RGB, six-cluster K-means")
-        st.write(f"**Evaluation:** stratified 80/20 hold-out split")
-        st.markdown("</div>", unsafe_allow_html=True)
-    st.warning(
-        "The accuracy shown is an internal hold-out result on this repository's dataset. "
-        "It is not evidence of clinical performance or a guarantee for new farms, cameras, or cattle breeds."
-    )
+    render_dashboard()
 
 elif page == "New Scan":
     st.subheader("Image screening")
