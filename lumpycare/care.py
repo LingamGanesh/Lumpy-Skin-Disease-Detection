@@ -102,21 +102,6 @@ def render_hospital_workspace():
             st.caption(h["services"])
             url="https://www.google.com/maps/search/?api=1&query="+quote_plus(h["name"]+" "+h["address"])
             st.link_button("Open directions in Google Maps",url)
-    st.divider()
-    st.subheader("🧑‍⚕️ Doctor dashboard")
-    st.caption("Appointment requests from this app. Prototype only; not a secure clinical-record system.")
-    for item in list_appointments():
-        with st.container(border=True):
-            st.markdown("**Appointment #"+str(item["id"])+" · "+item["status"]+"** — "+item["preferred_date"]+" at "+item["preferred_time"])
-            st.write("Hospital: "+item["hospital_name"]+" | Doctor: "+(item["doctor_name"] or "Not assigned"))
-            st.write("Owner: "+item["owner_name"]+" · Phone: "+item["phone"]+" · Cattle: "+item["cattle_name"])
-            if item["reason"]: st.caption("Reason: "+item["reason"])
-            statuses=["Requested","Confirmed","Completed","Cancelled"]
-            status=st.selectbox("Update status",statuses,index=statuses.index(item["status"]),key="appt_status_"+str(item["id"]))
-            if st.button("Save status",key="save_appt_"+str(item["id"])):
-                update_appointment_status(item["id"],status)
-                st.success("Appointment status updated.")
-                st.rerun()
 
 def render_appointment_booking():
     st.subheader("📅 Request a veterinary appointment")
@@ -140,3 +125,58 @@ def render_appointment_booking():
             else:
                 create_appointment(options[selected],owner,phone,cattle,date.isoformat(),time,reason)
                 st.success("Request saved. The clinic must contact you to confirm the appointment.")
+
+def render_doctor_portal():
+    """Show appointment management only after a doctor signs in."""
+    import streamlit as st
+    from lumpycare.auth import doctor_credentials_configured, verify_doctor_credentials
+
+    st.subheader("🩺 Doctor portal")
+    if not doctor_credentials_configured():
+        st.error("Doctor login is not configured yet. Set LUMPYCARE_DOCTOR_USERNAME and LUMPYCARE_DOCTOR_PASSWORD in your environment, then restart Streamlit.")
+        st.code('set LUMPYCARE_DOCTOR_USERNAME=doctor1\nset LUMPYCARE_DOCTOR_PASSWORD=choose-a-long-private-password\npython -m streamlit run app.py', language="bat")
+        st.info("For a deployed app, configure these as private environment secrets. Do not commit passwords to GitHub.")
+        return
+
+    if not st.session_state.get("doctor_authenticated", False):
+        st.markdown("Sign in with the clinic's private doctor account to view and manage appointment requests.")
+        with st.form("doctor_login_form"):
+            username = st.text_input("Doctor username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Doctor login", type="primary", use_container_width=True)
+        if submitted:
+            if verify_doctor_credentials(username.strip(), password):
+                st.session_state["doctor_authenticated"] = True
+                st.session_state["doctor_username"] = username.strip()
+                st.rerun()
+            else:
+                st.error("Invalid doctor username or password.")
+        return
+
+    head_col, logout_col = st.columns([4, 1])
+    with head_col:
+        st.success("Signed in as " + st.session_state.get("doctor_username", "Doctor"))
+    with logout_col:
+        if st.button("Logout", use_container_width=True):
+            st.session_state.pop("doctor_authenticated", None)
+            st.session_state.pop("doctor_username", None)
+            st.rerun()
+
+    st.caption("Appointment requests from this app. Verify patient details directly with the clinic before confirming. Prototype only; not a secure clinical-record system.")
+    appointments = list_appointments()
+    if not appointments:
+        st.info("No appointment requests have been submitted yet.")
+        return
+    for item in appointments:
+        with st.container(border=True):
+            st.markdown("**Appointment #" + str(item["id"]) + " · " + item["status"] + "** — " + item["preferred_date"] + " at " + item["preferred_time"])
+            st.write("Hospital: " + item["hospital_name"] + " | Doctor: " + (item["doctor_name"] or "Not assigned"))
+            st.write("Owner: " + item["owner_name"] + " · Phone: " + item["phone"] + " · Cattle: " + item["cattle_name"])
+            if item["reason"]:
+                st.caption("Reason: " + item["reason"])
+            statuses = ["Requested", "Confirmed", "Completed", "Cancelled"]
+            status = st.selectbox("Update status", statuses, index=statuses.index(item["status"]), key="doctor_appt_status_" + str(item["id"]))
+            if st.button("Save status", key="doctor_save_appt_" + str(item["id"])):
+                update_appointment_status(item["id"], status)
+                st.success("Appointment status updated.")
+                st.rerun()
