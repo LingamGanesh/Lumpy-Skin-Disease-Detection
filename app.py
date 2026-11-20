@@ -13,6 +13,7 @@ from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
 from lumpycare.database import analytics_activity, init_db, save_scan
 from lumpycare.dashboard import render_dashboard
+from lumpycare.care import render_care_guidance, render_hospital_workspace, render_appointment_booking
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -133,6 +134,8 @@ elif page == "New Scan":
             if result:
                 if result["Prediction"] == CLASSES[0]:
                     st.error("Model result: Lumpy skin")
+                    render_care_guidance()
+                    st.info("For veterinary help, use Hospitals & Doctors to search the registered directory or request a visit under Appointments.")
                 else:
                     st.success("Model result: Normal skin")
                 st.metric("Model probability estimate", f"{result['Confidence (%)']:.1f}%")
@@ -147,6 +150,15 @@ elif page == "New Scan":
                 )
     else:
         st.info("Upload a photo or take one with your camera to begin.")
+
+elif page == "Care & First Aid":
+    render_care_guidance()
+
+elif page == "Hospitals & Doctors":
+    render_hospital_workspace()
+
+elif page == "Appointments":
+    render_appointment_booking()
 
 elif page == "Model Insights":
     st.subheader("Model evaluation")
