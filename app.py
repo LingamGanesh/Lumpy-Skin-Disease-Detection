@@ -192,7 +192,7 @@ elif page == "Outbreak Map":
     if cases:
         map_data = pd.DataFrame([{"latitude": r["latitude"], "longitude": r["longitude"]} for r in cases])
         st.metric("Mapped positive screening records", len(cases))
-        st.map(map_data, size=18)
+        st.map(map_data, latitude="latitude", longitude="longitude", size=18)
         st.dataframe(pd.DataFrame([{"Scan ID":r["id"],"Cattle ID":r.get("cattle_id"),"Location":r.get("location"),"Scanned at":r["scanned_at"]} for r in cases]), hide_index=True, use_container_width=True)
     else:
         st.info("No positive scans with saved GPS coordinates yet. Add latitude and longitude to cattle profiles, then link new scans to those animals.")
