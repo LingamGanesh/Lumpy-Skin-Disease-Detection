@@ -10,6 +10,7 @@ import streamlit as st
 from PIL import Image, UnidentifiedImageError
 
 from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
+from lumpycare.ui import inject_theme, render_sidebar, render_topbar
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -18,29 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-:root { --ink:#163b30; --muted:#64776d; --line:#e2ebe5; --green:#176b52; }
-html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
-.stApp { background:#f5f8f6; color:var(--ink); }
-[data-testid="stHeader"] { background:rgba(245,248,246,.94); }
-.hero { padding:clamp(1.25rem,3vw,2.3rem); border-radius:22px; color:#fff;
-  background:linear-gradient(120deg,#123c32,#176b52 62%,#2b8a65);
-  box-shadow:0 12px 32px rgba(18,60,50,.13); margin-bottom:1.1rem; }
-.hero .eyebrow { color:#b7e2cc; text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:700; }
-.hero h1 { color:#fff; font-family:Manrope,sans-serif; font-size:clamp(1.8rem,4vw,2.55rem); margin:.25rem 0; }
-.hero p { color:#e0f1e8; margin:0; }
-.metric-card,.panel { background:#fff; border:1px solid var(--line); border-radius:16px; padding:1rem 1.1rem; }
-.metric-card { min-height:102px; }
-.metric-label { color:var(--muted); font-size:.82rem; font-weight:600; }
-.metric-value { color:var(--ink); font-family:Manrope,sans-serif; font-size:1.65rem; font-weight:800; margin-top:.25rem; }
-.muted { color:var(--muted); font-size:.9rem; }
-div[data-testid="stFileUploader"],div[data-testid="stCameraInput"] { background:#fff; border:1px dashed #9bb9a8; border-radius:14px; padding:.65rem; }
-.stButton>button,.stDownloadButton>button { border-radius:10px; font-weight:700; min-height:2.7rem; }
-@media(max-width:640px) { .hero { border-radius:16px; } .metric-card { min-height:86px; } }
-</style>
-""", unsafe_allow_html=True)
+inject_theme(st.session_state.get("lc_dark_mode", False))
 
 
 @st.cache_resource(show_spinner="Preparing the SVM screening model…")
@@ -61,17 +40,8 @@ def as_rgb(uploaded_file) :
     return image
 
 
-with st.sidebar:
-    st.markdown("## 🐄 LumpyCare")
-    st.caption("Cattle skin image screening")
-    page = st.radio(
-        "WORKSPACE",
-        ["Overview", "Screen an image", "Model evaluation", "Screening history"],
-        label_visibility="collapsed",
-    )
-    st.divider()
-    st.caption("Streamlit · OpenCV · scikit-learn · FastAPI")
-    st.caption("Research prototype — veterinary confirmation required.")
+page = render_sidebar()
+render_topbar(page)
 
 st.markdown(
     '<div class="hero"><div class="eyebrow">AI-assisted cattle skin screening</div>'
@@ -97,7 +67,7 @@ except Exception as exc:
 
 metrics = bundle.metrics
 
-if page == "Overview":
+if page == "Dashboard":
     st.subheader("Screening workspace")
     cols = st.columns(4)
     cards = [
@@ -134,7 +104,7 @@ if page == "Overview":
         "It is not evidence of clinical performance or a guarantee for new farms, cameras, or cattle breeds."
     )
 
-elif page == "Screen an image":
+elif page == "New Scan":
     st.subheader("Image screening")
     st.markdown(
         '<p class="muted">Use a clear, well-lit close-up. Camera capture requires browser permission and a secure context (HTTPS or localhost).</p>',
@@ -200,7 +170,7 @@ elif page == "Screen an image":
     else:
         st.info("Upload a photo or take one with your camera to begin.")
 
-elif page == "Model evaluation":
+elif page == "Model Insights":
     st.subheader("Model evaluation")
     st.caption(
         f"Source: {bundle.source}. The classifier is fit only on the training split; "
@@ -239,7 +209,7 @@ elif page == "Model evaluation":
         [{"Class": name, "Images": count} for name, count in metrics["class_counts"].items()]
     ), hide_index=True, use_container_width=True)
 
-elif page == "Screening history":
+elif page == "History":
     st.subheader("Session screening history")
     if st.session_state.history:
         history = pd.DataFrame(st.session_state.history)
@@ -256,6 +226,22 @@ elif page == "Screening history":
             st.rerun()
     else:
         st.info("No images have been analysed in this session yet.")
+
+
+else:
+    future_pages = {
+        "Cattle Profiles": ("🐄", "Cattle profiles", "Register cattle, record breed and age, and connect every screening to an animal. Persistent profiles arrive with the database phase."),
+        "Outbreak Map": ("📍", "Outbreak intelligence", "Location-based case mapping will be enabled after location capture and persistent scan records are added. No location data is currently stored."),
+        "Reports": ("📄", "Screening reports", "Downloadable reports and herd summaries will be added after persistent scan storage. Single-scan CSV export remains available under New Scan."),
+        "Settings": ("⚙️", "Workspace settings", "Language, alert thresholds, account roles, and data-retention controls will be introduced in later phases."),
+    }
+    icon, title, description = future_pages[page]
+    st.markdown(
+        f'<div class="panel"><div style="font-size:2rem">{icon}</div>'
+        f'<h2 style="color:var(--lc-ink)">{title}</h2><p class="muted">{description}</p>'
+        '<p class="muted"><b>Implementation status:</b> planned — no demo data is shown as real data.</p></div>',
+        unsafe_allow_html=True,
+    )
 
 st.divider()
 st.markdown(
