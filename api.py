@@ -36,11 +36,11 @@ def health():
 async def predict(file: UploadFile = File(...)):
     if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
         raise HTTPException(status_code=415, detail="Upload a JPG, PNG, or WEBP image.")
-    raw = await file.read()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Uploaded image is empty.")
+    raw = await file.read(10 * 1024 * 1024 + 1)
     if len(raw) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Image must be 10 MB or smaller.")
+    if not raw:
+        raise HTTPException(status_code=400, detail="Uploaded image is empty.")
     try:
         image = Image.open(BytesIO(raw)).convert("RGB")
         rgb = np.asarray(image)
