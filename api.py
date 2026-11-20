@@ -6,7 +6,7 @@ from io import BytesIO
 import sqlite3
 
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from PIL import Image, UnidentifiedImageError
 
@@ -51,6 +51,8 @@ def _filters(
 ) -> dict:
     if min_confidence > max_confidence:
         raise HTTPException(status_code=422, detail="min_confidence cannot exceed max_confidence")
+    if result_type not in {None, "Lumpy skin", "Normal skin"}:
+        raise HTTPException(status_code=422, detail="result_type must be Lumpy skin or Normal skin")
     return {
         "start_date": start_date, "end_date": end_date, "result_type": result_type,
         "min_confidence": min_confidence, "max_confidence": max_confidence,
@@ -100,7 +102,7 @@ def cattle_list():
 @app.post("/cattle", status_code=201)
 def cattle_create(payload: CattleCreate):
     try:
-        return create_cattle(**payload.model_dump())
+        return create_cattle(**payload.dict())
     except sqlite3.IntegrityError as exc:
         raise HTTPException(status_code=409, detail="Cattle ID already exists or related data is invalid.") from exc
 
@@ -116,7 +118,7 @@ def cattle_detail(cattle_id: str):
 def filter_parameters(
     start_date: str | None = None,
     end_date: str | None = None,
-    result_type: str | None = Query(default=None, pattern="^(Lumpy skin|Normal skin)$"),
+    result_type: str | None = None,
     min_confidence: float = Query(default=0, ge=0, le=1),
     max_confidence: float = Query(default=1, ge=0, le=1),
     cattle_id: str | None = None,
@@ -128,7 +130,7 @@ def filter_parameters(
 
 
 @app.get("/analytics/stats")
-def analytics_stats_route(filters: dict = __import__("fastapi").Depends(filter_parameters)):
+def analytics_stats_route(filters: dict = Depends(filter_parameters)):
     return analytics_stats(**filters)
 
 
