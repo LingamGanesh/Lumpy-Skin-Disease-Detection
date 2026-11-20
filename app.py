@@ -11,10 +11,11 @@ from PIL import Image, UnidentifiedImageError
 
 from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
-from lumpycare.database import analytics_activity, init_db, save_scan
+from lumpycare.database import analytics_activity, init_db, save_scan, list_cattle, get_cattle
 from lumpycare.dashboard import render_dashboard
 from lumpycare.care import render_care_guidance, render_hospital_workspace, render_appointment_booking, render_doctor_portal, render_hospital_admin_portal
 from lumpycare.auth import init_auth_db, bootstrap_environment_users
+from lumpycare.cattle import render_cattle_profiles
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -106,6 +107,12 @@ elif page == "New Scan":
                 st.error("The captured image could not be decoded.")
 
     if image is not None:
+        cattle_profiles = list_cattle()
+        cattle_choices = {"Not linked to a registered animal": None}
+        cattle_choices.update({f"{item['cattle_id']} — {item['name']}": item["cattle_id"] for item in cattle_profiles})
+        selected_cattle_label = st.selectbox("Link this screening to a cattle profile (optional)", list(cattle_choices))
+        selected_cattle_id = cattle_choices[selected_cattle_label]
+        selected_cattle = get_cattle(selected_cattle_id) if selected_cattle_id else None
         preview_col, result_col = st.columns([1.05, 1])
         with preview_col:
             st.image(image, caption="Image ready for screening", use_container_width=True)
@@ -119,6 +126,10 @@ elif page == "New Scan":
                         prediction=result["prediction"],
                         confidence=result["confidence"],
                         image_name=source_name,
+                        cattle_id=selected_cattle_id,
+                        location=(selected_cattle or {}).get("village") or None,
+                        latitude=(selected_cattle or {}).get("latitude"),
+                        longitude=(selected_cattle or {}).get("longitude"),
                         source="streamlit",
                         scanned_at=scanned_at.isoformat(),
                     )
@@ -127,6 +138,7 @@ elif page == "New Scan":
                         "Time (UTC)": scanned_at.strftime("%Y-%m-%d %H:%M:%S"),
                         "Image": source_name,
                         "Prediction": result["prediction"],
+                        "Cattle ID": selected_cattle_id or "",
                         "Confidence (%)": round(result["confidence"] * 100, 2),
                     }
                     st.session_state.latest_result = record
@@ -168,6 +180,38 @@ elif page == "Doctor Portal":
 
 elif page == "Hospital Admin":
     render_hospital_admin_portal()
+
+elif page == "Cattle Profiles":
+    render_cattle_profiles()
+
+elif page == "Outbreak Map":
+    st.subheader("📍 Field case map")
+    records = analytics_activity(limit=1000, include_demo=False)
+    cases = [r for r in records if r.get("prediction") == "Lumpy skin" and r.get("latitude") is not None and r.get("longitude") is not None]
+    st.caption("Only real, non-demo positive screening records with coordinates saved on the linked cattle profile are plotted. A screening result is not a confirmed outbreak report.")
+    if cases:
+        map_data = pd.DataFrame([{"latitude": r["latitude"], "longitude": r["longitude"]} for r in cases])
+        st.metric("Mapped positive screening records", len(cases))
+        st.map(map_data, size=18)
+        st.dataframe(pd.DataFrame([{"Scan ID":r["id"],"Cattle ID":r.get("cattle_id"),"Location":r.get("location"),"Scanned at":r["scanned_at"]} for r in cases]), hide_index=True, use_container_width=True)
+    else:
+        st.info("No positive scans with saved GPS coordinates yet. Add latitude and longitude to cattle profiles, then link new scans to those animals.")
+
+elif page == "Reports":
+    st.subheader("📄 Screening reports")
+    records = analytics_activity(limit=1000, include_demo=False)
+    if records:
+        report = pd.DataFrame(records)
+        infected = int((report["prediction"] == "Lumpy skin").sum())
+        healthy = int((report["prediction"] == "Normal skin").sum())
+        m1,m2,m3 = st.columns(3)
+        m1.metric("Real screening records", len(report))
+        m2.metric("Lumpy skin flags", infected)
+        m3.metric("Normal skin flags", healthy)
+        st.dataframe(report, hide_index=True, use_container_width=True)
+        st.download_button("Download screening report CSV", report.to_csv(index=False).encode("utf-8"), "lumpycare_report.csv", "text/csv")
+    else:
+        st.info("No real screening records available to report. Synthetic demo records are excluded.")
 
 elif page == "Model Insights":
     st.subheader("Model evaluation")
@@ -237,9 +281,6 @@ elif page == "History":
 
 else:
     future_pages = {
-        "Cattle Profiles": ("🐄", "Cattle profiles", "Register cattle, record breed and age, and connect every screening to an animal. Persistent profiles arrive with the database phase."),
-        "Outbreak Map": ("📍", "Outbreak intelligence", "Location-based case mapping will be enabled after location capture and persistent scan records are added. No location data is currently stored."),
-        "Reports": ("📄", "Screening reports", "Downloadable reports and herd summaries will be added after persistent scan storage. Single-scan CSV export remains available under New Scan."),
         "Settings": ("⚙️", "Workspace settings", "Language, alert thresholds, account roles, and data-retention controls will be introduced in later phases."),
     }
     icon, title, description = future_pages[page]
