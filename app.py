@@ -11,7 +11,7 @@ from PIL import Image, UnidentifiedImageError
 
 from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
-from lumpycare.database import init_db, save_scan
+from lumpycare.database import analytics_activity, init_db, save_scan
 from lumpycare.dashboard import render_dashboard
 
 st.set_page_config(
@@ -188,22 +188,30 @@ elif page == "Model Insights":
     ), hide_index=True, use_container_width=True)
 
 elif page == "History":
-    st.subheader("Session screening history")
-    if st.session_state.history:
-        history = pd.DataFrame(st.session_state.history)
+    st.subheader("Saved screening history")
+    st.caption("This table reads persistent SQLite records. Synthetic demo records are excluded.")
+    records = analytics_activity(limit=200, include_demo=False)
+    if records:
+        history = pd.DataFrame(records)
+        display_columns = ["id", "scanned_at", "image_name", "prediction", "confidence", "cattle_id", "location"]
+        history = history[[name for name in display_columns if name in history.columns]]
+        history = history.rename(columns={
+            "id": "Scan ID", "scanned_at": "Scanned at (UTC)", "image_name": "Image",
+            "prediction": "Prediction", "confidence": "Confidence",
+            "cattle_id": "Cattle ID", "location": "Location",
+        })
+        if "Confidence" in history:
+            history["Confidence"] = (history["Confidence"] * 100).round(1).astype(str) + "%"
         st.dataframe(history, hide_index=True, use_container_width=True)
+        export = pd.DataFrame(records)
         st.download_button(
-            "Export session history CSV",
-            data=history.to_csv(index=False).encode("utf-8"),
-            file_name="lumpycare_history.csv",
+            "Export saved history CSV",
+            data=export.to_csv(index=False).encode("utf-8"),
+            file_name="lumpycare_saved_history.csv",
             mime="text/csv",
         )
-        if st.button("Clear history", type="secondary"):
-            st.session_state.history = []
-            st.session_state.latest_result = None
-            st.rerun()
     else:
-        st.info("No images have been analysed in this session yet.")
+        st.info("No real screening records are saved yet. Run an image screening to create the first record.")
 
 
 else:
