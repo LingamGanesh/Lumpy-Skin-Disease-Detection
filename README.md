@@ -6,11 +6,13 @@ An educational image-screening prototype for cattle skin photos. The project use
 
 ## What is implemented
 
-- Responsive Streamlit interface with overview, screening, model evaluation and session history.
-- Image upload for JPG, JPEG, PNG and WEBP.
-- Browser camera capture through Streamlit's camera input widget (still-photo capture, not continuous video).
-- Image preview, predicted class, class probability estimates and CSV export.
-- Session-only prediction history with CSV export and clear-history action.
+- Responsive Streamlit workspace with dashboard, image screening, persistent scan history and model evaluation.
+- Image upload for JPG, JPEG, PNG and WEBP, plus browser camera still-photo capture.
+- Prediction result with class probability estimate, CSV export and contextual first-aid / veterinary-care guidance when the model flags Lumpy skin.
+- SQLite-backed screening records; synthetic demo records are explicitly marked and excluded from the real History view.
+- Veterinary hospital directory: staff can register clinic details and search saved entries by locality/address.
+- Appointment request workflow: cattle owners can submit a preferred visit request; the doctor workspace can update request status.
+- Google Maps directions link for each registered hospital. This is not live GPS-based nearest-clinic discovery.
 - Held-out evaluation view: accuracy, confusion matrix, per-class precision/recall/F1 and class counts.
 - Shared model/inference module used by both the Streamlit app and the optional FastAPI service.
 - FastAPI health and image-prediction endpoints with upload validation and size limits.
@@ -40,8 +42,10 @@ flowchart TD
 |---|---|
 | `app.py` | Streamlit user interface and session workflows |
 | `lumpycare/model.py` | Shared preprocessing, training, evaluation and inference |
-| `api.py` | Optional FastAPI inference service |
-| `tests/` | Automated preprocessing and API validation tests |
+| `api.py` | Optional FastAPI inference and analytics service |
+| `lumpycare/database.py` | SQLite persistence for cattle, scans and analytics |
+| `lumpycare/care.py` | Veterinary guidance, hospital directory and appointment workflow |
+| `tests/` | Automated preprocessing, API, hospital and appointment tests |
 | `requirements.txt` | Runtime and test dependencies |
 | `.streamlit/config.toml` | Streamlit theme and server configuration |
 | `features/` | Existing precomputed feature and label arrays, when supplied |
