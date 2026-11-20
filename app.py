@@ -13,7 +13,7 @@ from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
 from lumpycare.database import analytics_activity, init_db, save_scan
 from lumpycare.dashboard import render_dashboard
-from lumpycare.care import render_care_guidance, render_hospital_workspace, render_appointment_booking
+from lumpycare.care import render_care_guidance, render_hospital_workspace, render_appointment_booking, render_doctor_portal
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -159,6 +159,9 @@ elif page == "Hospitals & Doctors":
 
 elif page == "Appointments":
     render_appointment_booking()
+
+elif page == "Doctor Portal":
+    render_doctor_portal()
 
 elif page == "Model Insights":
     st.subheader("Model evaluation")
