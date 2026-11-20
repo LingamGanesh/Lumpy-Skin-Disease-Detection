@@ -11,6 +11,7 @@ from PIL import Image, UnidentifiedImageError
 
 from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
+from lumpycare.database import init_db, save_scan
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -66,6 +67,7 @@ except Exception as exc:
     st.stop()
 
 metrics = bundle.metrics
+init_db()
 
 if page == "Dashboard":
     st.subheader("Screening workspace")
@@ -141,8 +143,17 @@ elif page == "New Scan":
             if st.button("Analyse image", type="primary", use_container_width=True):
                 try:
                     result = predict_rgb(bundle, np.asarray(image))
+                    scanned_at = datetime.now(timezone.utc)
+                    scan_id = save_scan(
+                        prediction=result["prediction"],
+                        confidence=result["confidence"],
+                        image_name=source_name,
+                        source="streamlit",
+                        scanned_at=scanned_at.isoformat(),
+                    )
                     record = {
-                        "Time (UTC)": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                        "Scan ID": scan_id,
+                        "Time (UTC)": scanned_at.strftime("%Y-%m-%d %H:%M:%S"),
                         "Image": source_name,
                         "Prediction": result["prediction"],
                         "Confidence (%)": round(result["confidence"] * 100, 2),
