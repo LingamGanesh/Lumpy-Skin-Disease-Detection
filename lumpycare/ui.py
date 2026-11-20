@@ -33,7 +33,7 @@ def inject_theme(dark_mode: bool = False) -> None:
     .lc-page-title { color:var(--lc-ink); font:800 clamp(1.5rem,3vw,2rem) 'Manrope',sans-serif; letter-spacing:-.045em; }
     .lc-subtitle,.muted { color:var(--lc-muted); font-size:.9rem; }
     .hero { padding:clamp(1.35rem,3vw,2.25rem); border-radius:22px; color:#fff;
-      background:radial-gradient(circle at 85% 15%,rgba(105,220,174,.24),transparent 28%),linear-gradient(120deg,#103b32,#147a5b 62%,#269a70);
+      background:radial-gradient(circle at 85% 15%,rgba(105,220,174,.24),transparent 28%),linear-gradient(120deg,#103b32,#147a5b 62%%,#269a70);
       box-shadow:0 16px 38px rgba(15,83,60,.17); margin-bottom:1.25rem; }
     .hero .eyebrow { color:#bcebd4; text-transform:uppercase; letter-spacing:.14em; font-size:.7rem; font-weight:800; }
     .hero h1 { color:#fff; font:800 clamp(1.8rem,4vw,2.55rem) 'Manrope',sans-serif; letter-spacing:-.045em; margin:.3rem 0; }
