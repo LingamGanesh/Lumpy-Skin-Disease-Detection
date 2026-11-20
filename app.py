@@ -13,7 +13,8 @@ from lumpycare.model import CLASSES, ModelBundle, predict_rgb, train_model
 from lumpycare.ui import inject_theme, render_sidebar, render_topbar
 from lumpycare.database import analytics_activity, init_db, save_scan
 from lumpycare.dashboard import render_dashboard
-from lumpycare.care import render_care_guidance, render_hospital_workspace, render_appointment_booking, render_doctor_portal
+from lumpycare.care import render_care_guidance, render_hospital_workspace, render_appointment_booking, render_doctor_portal, render_hospital_admin_portal
+from lumpycare.auth import init_auth_db, bootstrap_environment_users
 
 st.set_page_config(
     page_title="LumpyCare | Cattle Skin Screening",
@@ -70,6 +71,8 @@ except Exception as exc:
 
 metrics = bundle.metrics
 init_db()
+init_auth_db()
+bootstrap_environment_users()
 
 if page == "Dashboard":
     render_dashboard()
@@ -162,6 +165,9 @@ elif page == "Appointments":
 
 elif page == "Doctor Portal":
     render_doctor_portal()
+
+elif page == "Hospital Admin":
+    render_hospital_admin_portal()
 
 elif page == "Model Insights":
     st.subheader("Model evaluation")
