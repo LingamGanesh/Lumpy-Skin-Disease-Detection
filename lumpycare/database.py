@@ -208,9 +208,10 @@ def analytics_activity(limit: int = 20, **filters: Any) -> list[dict[str, Any]]:
     where, values = _filters(**filters)
     with connect() as con:
         rows = con.execute(
-            f"""SELECT s.*, c.name cattle_name FROM scans s
-                LEFT JOIN cattle c ON c.cattle_id=s.cattle_id{where}
-                ORDER BY scanned_at DESC LIMIT ?""", [*values, max(1, min(limit, 100))]
+            f"""SELECT scans.*,
+                (SELECT name FROM cattle WHERE cattle.cattle_id=scans.cattle_id) cattle_name
+                FROM scans{where} ORDER BY scanned_at DESC LIMIT ?""",
+            [*values, max(1, min(limit, 100))]
         ).fetchall()
     return [dict(row) for row in rows]
 
