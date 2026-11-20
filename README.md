@@ -215,7 +215,7 @@ set LUMPYCARE_ADMIN_NAME=Hospital Administrator
 python -m streamlit run app.py
 ```
 
-Open **Hospital Admin** and sign in. Then open **Hospitals & Doctors** to register the clinic. Return to **Hospital Admin** and create individual doctor accounts, assigning each doctor to the correct hospital. Share temporary credentials privately with each doctor. Doctors sign in through **Doctor Portal**.
+Open **Hospital Admin** and sign in. Then open **Hospitals & Doctors** to register the clinic. Return to **Hospital Admin** and create individual doctor accounts, assigning each doctor to the correct hospital. Share temporary credentials privately with each doctor. Doctors sign in through **Doctor Portal**. The **Cattle Profiles** page registers animals; New Scan can link a scan to a registered cattle ID and copy its saved locality/GPS coordinates into that scan. **Outbreak Map** plots non-demo positive screening records only when coordinates are available, and **Reports** exports non-demo screening records to CSV.
 
 The initial admin account is created only when the user table is empty. Keep the environment variables private; never commit passwords to Git. The CMD `set` values apply only to that terminal session. For deployment, configure secrets/environment variables in the hosting platform and use persistent protected storage for the SQLite database.
 
