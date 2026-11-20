@@ -66,7 +66,7 @@ def render_sidebar() -> str:
     with st.sidebar:
         st.markdown('<div class="lc-brand"><div class="lc-brand-mark">🐄</div><div><div class="lc-brand-name">LumpyCare</div><div class="lc-brand-sub">VETERINARY AI WORKSPACE</div></div></div>', unsafe_allow_html=True)
         st.caption("WORKSPACE")
-        page = st.radio("Main navigation", ["Dashboard","New Scan","Care & First Aid","Hospitals & Doctors","Appointments","Doctor Portal","History","Cattle Profiles","Outbreak Map","Reports","Model Insights","Settings"], label_visibility="collapsed")
+        page = st.radio("Main navigation", ["Dashboard","New Scan","Care & First Aid","Hospitals & Doctors","Appointments","Doctor Portal","Hospital Admin","History","Cattle Profiles","Outbreak Map","Reports","Model Insights","Settings"], label_visibility="collapsed")
         st.divider()
         st.caption("APPEARANCE")
         st.toggle("Dark mode", key="lc_dark_mode", help="Switch the current session to a dark color theme.")
