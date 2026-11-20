@@ -18,6 +18,11 @@ def inject_theme(dark_mode: bool = False) -> None:
     :root { --lc-page:%(page)s; --lc-surface:%(surface)s; --lc-ink:%(ink)s; --lc-muted:%(muted)s;
       --lc-line:%(line)s; --lc-green:%(green)s; --lc-green-soft:%(green_soft)s; --lc-shadow:%(shadow)s; }
     html,body,[class*="css"] { font-family:'DM Sans',sans-serif; }
+    html,body,[class*="css"] { color:var(--lc-ink) !important; }
+    .stMarkdown,.stMarkdown p,.stMarkdown li,.stMarkdown span,label,[data-testid="stWidgetLabel"] p { color:var(--lc-ink); }
+    .stCaption,[data-testid="stCaptionContainer"] p,.muted,.lc-subtitle { color:var(--lc-muted) !important; }
+    input,textarea,[data-baseweb="select"]>div { color:var(--lc-ink) !important; background:var(--lc-surface) !important; border-color:var(--lc-line) !important; }
+    [data-testid="stSidebar"] label,[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color:var(--lc-ink) !important; }
     .stApp { background:var(--lc-page); color:var(--lc-ink); }
     [data-testid="stHeader"] { background:transparent; }
     [data-testid="stSidebar"] { background:var(--lc-surface); border-right:1px solid var(--lc-line); }
@@ -61,7 +66,7 @@ def render_sidebar() -> str:
     with st.sidebar:
         st.markdown('<div class="lc-brand"><div class="lc-brand-mark">🐄</div><div><div class="lc-brand-name">LumpyCare</div><div class="lc-brand-sub">VETERINARY AI WORKSPACE</div></div></div>', unsafe_allow_html=True)
         st.caption("WORKSPACE")
-        page = st.radio("Main navigation", ["Dashboard","New Scan","History","Cattle Profiles","Outbreak Map","Reports","Model Insights","Settings"], label_visibility="collapsed")
+        page = st.radio("Main navigation", ["Dashboard","New Scan","Care & First Aid","Hospitals & Doctors","Appointments","History","Cattle Profiles","Outbreak Map","Reports","Model Insights","Settings"], label_visibility="collapsed")
         st.divider()
         st.caption("APPEARANCE")
         st.toggle("Dark mode", key="lc_dark_mode", help="Switch the current session to a dark color theme.")
