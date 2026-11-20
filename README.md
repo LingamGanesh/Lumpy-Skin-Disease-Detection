@@ -198,3 +198,16 @@ Screenshots are intentionally not fabricated. Capture the running application af
 ## License
 
 No license is declared in this repository. Contact the repository owner before reusing or redistributing the code or dataset.
+
+
+## Doctor portal login
+
+The appointment-management dashboard is available only from **Doctor Portal** after signing in. Configure one private doctor account before starting the app. On Windows Command Prompt:
+
+```bat
+set LUMPYCARE_DOCTOR_USERNAME=doctor1
+set LUMPYCARE_DOCTOR_PASSWORD=replace-with-a-long-private-password
+python -m streamlit run app.py
+```
+
+Keep these values private and do not commit them to Git. The `set` commands apply only to the current Command Prompt window. For deployment, add both values as private environment variables/secrets in the hosting platform and restart the app. This is a single shared-account prototype gate, not production-grade multi-user authentication; use an identity provider, per-doctor accounts, HTTPS, and server-side authorization before handling real patient records.
