@@ -140,6 +140,9 @@ def _render_login(required_role: str):
         if user.get("role") == required_role:
             return user
         st.error("This account does not have permission to open this workspace.")
+        if st.button("Logout current account", key="wrong_role_logout"):
+            st.session_state.pop("lc_user", None)
+            st.rerun()
         return None
     st.markdown("Sign in with your hospital account. Passwords are stored as salted PBKDF2 hashes.")
     with st.form("lumpycare_login_" + required_role):
