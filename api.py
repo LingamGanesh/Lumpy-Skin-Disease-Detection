@@ -135,31 +135,31 @@ def analytics_stats_route(filters: dict = Depends(filter_parameters)):
 
 
 @app.get("/analytics/trends")
-def analytics_trends_route(filters: dict = __import__("fastapi").Depends(filter_parameters)):
+def analytics_trends_route(filters: dict = Depends(filter_parameters)):
     return {"items": analytics_trends(**filters)}
 
 
 @app.get("/analytics/distribution")
-def analytics_distribution_route(filters: dict = __import__("fastapi").Depends(filter_parameters)):
+def analytics_distribution_route(filters: dict = Depends(filter_parameters)):
     return analytics_distribution(**filters)
 
 
 @app.get("/analytics/activity")
 def analytics_activity_route(
     limit: int = Query(default=20, ge=1, le=100),
-    filters: dict = __import__("fastapi").Depends(filter_parameters),
+    filters: dict = Depends(filter_parameters),
 ):
     return {"items": analytics_activity(limit=limit, **filters)}
 
 
 @app.get("/analytics/geo")
-def analytics_geo_route(filters: dict = __import__("fastapi").Depends(filter_parameters)):
+def analytics_geo_route(filters: dict = Depends(filter_parameters)):
     return {"items": analytics_geo(**filters)}
 
 
 @app.get("/analytics/alerts")
 def analytics_alerts_route(
     threshold: float = Query(default=.30, ge=0, le=1),
-    filters: dict = __import__("fastapi").Depends(filter_parameters),
+    filters: dict = Depends(filter_parameters),
 ):
     return {"threshold": threshold, "items": analytics_alerts(threshold=threshold, **filters)}
