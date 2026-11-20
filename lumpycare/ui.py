@@ -52,7 +52,9 @@ def inject_theme(dark_mode: bool = False) -> None:
     button:focus-visible,input:focus-visible,[tabindex="0"]:focus-visible { outline:3px solid #55c99b !important; outline-offset:2px !important; }
     @media(max-width:760px) { .hero{border-radius:17px}.metric-card{min-height:88px}.lc-topbar{padding:.7rem;border-radius:13px} section.main>div{padding-left:1rem;padding-right:1rem} }
     @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important;transition-duration:.01ms !important; } }
-    """ % palette
+    """
+    for key, value in palette.items():
+        css = css.replace("%(" + key + ")s", value)
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 def render_sidebar() -> str:
