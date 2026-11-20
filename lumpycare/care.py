@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote_plus
 import streamlit as st
 from lumpycare.database import connect, init_db
+from lumpycare.auth import authenticate_user, create_user, list_users, set_user_active
 
 def init_care_db():
     init_db()
@@ -40,10 +41,13 @@ def create_appointment(hospital_id,owner,phone,cattle,date,time,reason):
     with connect() as con:
         con.execute("INSERT INTO appointments(hospital_id,owner_name,phone,cattle_name,preferred_date,preferred_time,reason,created_at) VALUES(?,?,?,?,?,?,?,?)",(hospital_id,owner.strip(),phone.strip(),cattle.strip(),date,time,reason.strip(),datetime.now(timezone.utc).isoformat()))
 
-def list_appointments():
+def list_appointments(hospital_id=None):
     init_care_db()
     with connect() as con:
-        rows=con.execute("SELECT a.*,h.name hospital_name,h.doctor_name FROM appointments a JOIN hospitals h ON h.id=a.hospital_id ORDER BY a.preferred_date,a.preferred_time,a.id DESC").fetchall()
+        if hospital_id is None:
+            rows=con.execute("SELECT a.*,h.name hospital_name,h.doctor_name FROM appointments a JOIN hospitals h ON h.id=a.hospital_id ORDER BY a.preferred_date,a.preferred_time,a.id DESC").fetchall()
+        else:
+            rows=con.execute("SELECT a.*,h.name hospital_name,h.doctor_name FROM appointments a JOIN hospitals h ON h.id=a.hospital_id WHERE a.hospital_id=? ORDER BY a.preferred_date,a.preferred_time,a.id DESC",(hospital_id,)).fetchall()
     return [dict(r) for r in rows]
 
 def update_appointment_status(appointment_id,status):
@@ -73,7 +77,9 @@ def render_hospital_workspace():
     init_care_db()
     st.subheader("🏥 Veterinary hospital directory")
     st.caption("Register verified clinics. Search uses the locality/address saved here; it is not live GPS-based nearest-hospital detection.")
-    with st.form("hospital_add_form"):
+    is_admin = st.session_state.get("lc_user", {}).get("role") == "admin"
+    if is_admin:
+      with st.form("hospital_add_form"):
         st.markdown("**Register a veterinary hospital / clinic**")
         c1,c2=st.columns(2)
         name=c1.text_input("Hospital / clinic name")
@@ -89,6 +95,8 @@ def render_hospital_workspace():
                 add_hospital(name,doctor,phone,address,locality,services)
                 st.success("Hospital added to this local directory.")
                 st.rerun()
+    else:
+        st.caption("Only a signed-in Hospital Admin can register clinics. You can still search the directory below.")
     st.divider()
     query=st.text_input("Find hospitals by village / locality / town",key="hospital_search")
     hospitals=list_hospitals(query)
@@ -126,57 +134,115 @@ def render_appointment_booking():
                 create_appointment(options[selected],owner,phone,cattle,date.isoformat(),time,reason)
                 st.success("Request saved. The clinic must contact you to confirm the appointment.")
 
-def render_doctor_portal():
-    """Show appointment management only after a doctor signs in."""
-    import streamlit as st
-    from lumpycare.auth import doctor_credentials_configured, verify_doctor_credentials
-
-    st.subheader("🩺 Doctor portal")
-    if not doctor_credentials_configured():
-        st.error("Doctor login is not configured yet. Set LUMPYCARE_DOCTOR_USERNAME and LUMPYCARE_DOCTOR_PASSWORD in your environment, then restart Streamlit.")
-        st.code('set LUMPYCARE_DOCTOR_USERNAME=doctor1\nset LUMPYCARE_DOCTOR_PASSWORD=choose-a-long-private-password\npython -m streamlit run app.py', language="bat")
-        st.info("For a deployed app, configure these as private environment secrets. Do not commit passwords to GitHub.")
-        return
-
-    if not st.session_state.get("doctor_authenticated", False):
-        st.markdown("Sign in with the clinic's private doctor account to view and manage appointment requests.")
-        with st.form("doctor_login_form"):
-            username = st.text_input("Doctor username")
-            password = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Doctor login", type="primary", use_container_width=True)
-        if submitted:
-            if verify_doctor_credentials(username.strip(), password):
-                st.session_state["doctor_authenticated"] = True
-                st.session_state["doctor_username"] = username.strip()
-                st.rerun()
-            else:
-                st.error("Invalid doctor username or password.")
-        return
-
-    head_col, logout_col = st.columns([4, 1])
-    with head_col:
-        st.success("Signed in as " + st.session_state.get("doctor_username", "Doctor"))
-    with logout_col:
-        if st.button("Logout", use_container_width=True):
-            st.session_state.pop("doctor_authenticated", None)
-            st.session_state.pop("doctor_username", None)
+def _render_login(required_role: str):
+    user = st.session_state.get("lc_user")
+    if user:
+        if user.get("role") == required_role:
+            return user
+        st.error("This account does not have permission to open this workspace.")
+        return None
+    st.markdown("Sign in with your hospital account. Passwords are stored as salted PBKDF2 hashes.")
+    with st.form("lumpycare_login_" + required_role):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+    if submitted:
+        user = authenticate_user(username, password)
+        if user and user["role"] == required_role:
+            st.session_state["lc_user"] = user
             st.rerun()
+        st.error("Invalid credentials or account role.")
+    return None
 
-    st.caption("Appointment requests from this app. Verify patient details directly with the clinic before confirming. Prototype only; not a secure clinical-record system.")
-    appointments = list_appointments()
-    if not appointments:
-        st.info("No appointment requests have been submitted yet.")
+
+def _render_workspace_header(user):
+    left, right = st.columns([4, 1])
+    left.success("Signed in: " + user["full_name"])
+    if right.button("Logout", key="lumpycare_logout", use_container_width=True):
+        st.session_state.pop("lc_user", None)
+        st.rerun()
+
+
+def render_doctor_portal():
+    st.subheader("🩺 Doctor workspace")
+    user = _render_login("doctor")
+    if not user:
         return
-    for item in appointments:
+    _render_workspace_header(user)
+    hospital_id = user.get("hospital_id")
+    if hospital_id is None:
+        st.error("This doctor account has no hospital assignment. Contact the Hospital Admin.")
+        return
+    appointments = list_appointments(hospital_id=hospital_id)
+    requested = sum(a["status"] == "Requested" for a in appointments)
+    confirmed = sum(a["status"] == "Confirmed" for a in appointments)
+    completed = sum(a["status"] == "Completed" for a in appointments)
+    k1,k2,k3,k4 = st.columns(4)
+    k1.metric("Total", len(appointments))
+    k2.metric("Pending", requested)
+    k3.metric("Confirmed", confirmed)
+    k4.metric("Completed", completed)
+    st.caption("Only appointments for your assigned hospital are shown. Confirm the appointment with the owner through the clinic's normal contact process.")
+    query = st.text_input("Search owner, cattle ID/name or phone", key="doctor_appointment_search").strip().lower()
+    status_filter = st.selectbox("Filter status", ["All", "Requested", "Confirmed", "Completed", "Cancelled"], key="doctor_status_filter")
+    visible = [a for a in appointments if (status_filter == "All" or a["status"] == status_filter) and (not query or query in " ".join(str(a[k]) for k in ("owner_name","cattle_name","phone","reason")).lower())]
+    if not visible:
+        st.info("No matching appointment requests.")
+    for item in visible:
         with st.container(border=True):
             st.markdown("**Appointment #" + str(item["id"]) + " · " + item["status"] + "** — " + item["preferred_date"] + " at " + item["preferred_time"])
-            st.write("Hospital: " + item["hospital_name"] + " | Doctor: " + (item["doctor_name"] or "Not assigned"))
             st.write("Owner: " + item["owner_name"] + " · Phone: " + item["phone"] + " · Cattle: " + item["cattle_name"])
             if item["reason"]:
-                st.caption("Reason: " + item["reason"])
+                st.caption("Reported symptoms: " + item["reason"])
             statuses = ["Requested", "Confirmed", "Completed", "Cancelled"]
-            status = st.selectbox("Update status", statuses, index=statuses.index(item["status"]), key="doctor_appt_status_" + str(item["id"]))
+            status = st.selectbox("Appointment status", statuses, index=statuses.index(item["status"]), key="doctor_appt_status_" + str(item["id"]))
             if st.button("Save status", key="doctor_save_appt_" + str(item["id"])):
                 update_appointment_status(item["id"], status)
                 st.success("Appointment status updated.")
                 st.rerun()
+
+
+def render_hospital_admin_portal():
+    st.subheader("🏥 Hospital administration")
+    user = _render_login("admin")
+    if not user:
+        return
+    _render_workspace_header(user)
+    hospitals = list_hospitals()
+    appointments = list_appointments()
+    pending = sum(a["status"] == "Requested" for a in appointments)
+    a,b,d = st.columns(3)
+    a.metric("Registered hospitals", len(hospitals))
+    b.metric("Total appointment requests", len(appointments))
+    d.metric("Pending requests", pending)
+    st.markdown("### Hospital directory")
+    for h in hospitals:
+        st.write("**" + h["name"] + "** · " + h["locality"] + " · " + (h["phone"] or "No phone"))
+    st.markdown("### Create a doctor account")
+    if not hospitals:
+        st.warning("Register a hospital in Hospitals & Doctors before creating doctor accounts.")
+    else:
+        choices = {f'{h["name"]} — {h["locality"]} (ID {h["id"]})': h["id"] for h in hospitals}
+        with st.form("admin_create_doctor"):
+            full_name = st.text_input("Doctor full name")
+            username = st.text_input("Doctor username")
+            password = st.text_input("Temporary password (minimum 12 characters)", type="password")
+            hospital_label = st.selectbox("Assign hospital", list(choices))
+            submitted = st.form_submit_button("Create doctor account", type="primary")
+            if submitted:
+                try:
+                    create_user(username, full_name, "doctor", password, choices[hospital_label])
+                    st.success("Doctor account created. Share credentials securely with the doctor.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(str(exc))
+    st.markdown("### User access")
+    users = list_users()
+    if users:
+        st.dataframe([{k: u[k] for k in ("id","username","full_name","role","hospital_id","active")} for u in users], hide_index=True, use_container_width=True)
+        for account in users:
+            if account["id"] != user["id"]:
+                label = "Deactivate " if account["active"] else "Reactivate "
+                if st.button(label + account["username"], key="toggle_user_" + str(account["id"])):
+                    set_user_active(account["id"], not bool(account["active"]))
+                    st.rerun()
