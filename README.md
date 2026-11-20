@@ -200,14 +200,31 @@ Screenshots are intentionally not fabricated. Capture the running application af
 No license is declared in this repository. Contact the repository owner before reusing or redistributing the code or dataset.
 
 
-## Doctor portal login
+## Doctor and Hospital Admin portals
 
-The appointment-management dashboard is available only from **Doctor Portal** after signing in. Configure one private doctor account before starting the app. On Windows Command Prompt:
+This repository currently provides a **local research prototype** with separate Hospital Admin and Doctor workspaces. User passwords are stored as salted PBKDF2-HMAC-SHA256 hashes. Doctors are assigned to a hospital, and the Doctor workspace filters appointment requests to that hospital.
+
+### First-time Windows CMD setup
+
+Configure the first Hospital Admin account in the same Command Prompt window before starting Streamlit. Use a unique password of at least 12 characters:
 
 ```bat
-set LUMPYCARE_DOCTOR_USERNAME=doctor1
-set LUMPYCARE_DOCTOR_PASSWORD=replace-with-a-long-private-password
+set LUMPYCARE_ADMIN_USERNAME=hospitaladmin
+set LUMPYCARE_ADMIN_PASSWORD=replace-with-a-long-unique-password
+set LUMPYCARE_ADMIN_NAME=Hospital Administrator
 python -m streamlit run app.py
 ```
 
-Keep these values private and do not commit them to Git. The `set` commands apply only to the current Command Prompt window. For deployment, add both values as private environment variables/secrets in the hosting platform and restart the app. This is a single shared-account prototype gate, not production-grade multi-user authentication; use an identity provider, per-doctor accounts, HTTPS, and server-side authorization before handling real patient records.
+Open **Hospital Admin** and sign in. Then open **Hospitals & Doctors** to register the clinic. Return to **Hospital Admin** and create individual doctor accounts, assigning each doctor to the correct hospital. Share temporary credentials privately with each doctor. Doctors sign in through **Doctor Portal**.
+
+The initial admin account is created only when the user table is empty. Keep the environment variables private; never commit passwords to Git. The CMD `set` values apply only to that terminal session. For deployment, configure secrets/environment variables in the hosting platform and use persistent protected storage for the SQLite database.
+
+### Current security and deployment boundaries
+
+- This is an application-level prototype login, not a security-certified identity system. Use HTTPS, secure session management, CSRF protections, audit logging, backups, rate limiting, per-user password reset, and a production identity provider before real clinical use.
+- The Streamlit UI restricts doctor appointment views by assigned hospital. The current FastAPI endpoints have not yet been comprehensively secured with the same role permissions; do not expose them publicly with real patient data.
+- SQLite is suitable for local demonstration only. Use a managed database and protected file/object storage for a multi-user deployment.
+- Appointment requests are saved locally; this app does not send SMS/email and does not itself guarantee a booking. The clinic must contact the owner to confirm.
+- Hospital search uses the registered locality/address, not live GPS discovery. Hospital records must be independently verified.
+- Do not store real patient-sensitive information in this prototype.
+
