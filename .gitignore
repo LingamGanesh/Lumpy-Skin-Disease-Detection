@@ -221,3 +221,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# LumpyCare local SQLite database and generated uploads
+/data/
