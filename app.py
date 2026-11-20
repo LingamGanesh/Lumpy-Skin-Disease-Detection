@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import streamlit as st
 from PIL import Image, UnidentifiedImageError
@@ -169,7 +170,7 @@ elif page == "Screen an image":
             st.markdown("### Prediction")
             if st.button("Analyse image", type="primary", use_container_width=True):
                 try:
-                    result = predict_rgb(bundle, __import__("numpy").asarray(image))
+                    result = predict_rgb(bundle, np.asarray(image))
                     record = {
                         "Time (UTC)": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                         "Image": source_name,
@@ -225,7 +226,7 @@ elif page == "Model evaluation":
     ax.set_xlabel("Predicted class")
     ax.set_ylabel("Actual class")
     ax.set_title("Confusion matrix")
-    for (row, col), value in __import__("numpy").ndenumerate(cm):
+    for (row, col), value in np.ndenumerate(cm):
         ax.text(col, row, str(value), ha="center", va="center", fontsize=13)
     fig.colorbar(heat, ax=ax, fraction=.046, pad=.04)
     fig.tight_layout()
