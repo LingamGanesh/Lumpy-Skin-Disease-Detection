@@ -13,7 +13,7 @@ class FakeClassifier:
 
 
 def test_extract_features_returns_expected_vector():
-    image = np.zeros((180, 220, 3), dtype=np.uint8)
+    image = np.random.default_rng(3).integers(0, 256, (180, 220, 3), dtype=np.uint8)
     vector = extract_features(image)
     assert vector.shape == (128 * 128 * 3,)
     assert vector.dtype == np.float32
@@ -33,7 +33,7 @@ def test_extract_features_rejects_empty_input():
 
 def test_predict_rgb_returns_class_and_probability():
     bundle = ModelBundle(FakeClassifier(), {}, "test fixture")
-    result = predict_rgb(bundle, np.zeros((128, 128, 3), dtype=np.uint8))
+    result = predict_rgb(bundle, np.random.default_rng(5).integers(0, 256, (128, 128, 3), dtype=np.uint8))
     assert result["prediction"] == "Normal skin"
     assert result["class_id"] == 1
     assert result["confidence"] == pytest.approx(0.85)
